@@ -51,10 +51,6 @@
         #team-info {
             margin-top: 20px;
         }
-        #team-info img {
-            max-width: 100px;
-            border-radius: 50%;
-        }
     </style>
 </head>
 <body>
@@ -80,7 +76,6 @@
     <div id="team-info">
         <h3>Team Information</h3>
         <p id="team-name"></p>
-        <img id="team-avatar" src="" alt="Team Avatar">
     </div>
 </main>
 
@@ -118,13 +113,9 @@
     // Function to show team information when a user is clicked
     function showTeamInfo(user) {
         const teamNameElement = document.getElementById('team-name');
-        const teamAvatarElement = document.getElementById('team-avatar');
 
         // Update the team info section
         teamNameElement.textContent = `Team Name: ${user.metadata.team_name || 'No team name provided'}`;
-        teamAvatarElement.src = user.avatar
-            ? `https://sleepercdn.com/avatars/thumbs/${user.avatar}` // Sleeper's avatar URL format
-            : ''; // If no avatar is provided, set the src to an empty string
     }
 
     // Fetch and display users when the page loads
