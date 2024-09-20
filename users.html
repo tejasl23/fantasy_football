@@ -43,6 +43,17 @@
             background-color: #f4f4f4;
             margin-bottom: 5px;
             border: 1px solid #ddd;
+            cursor: pointer;
+        }
+        li:hover {
+            background-color: #e0e0e0;
+        }
+        #team-info {
+            margin-top: 20px;
+        }
+        #team-info img {
+            max-width: 100px;
+            border-radius: 50%;
         }
     </style>
 </head>
@@ -60,16 +71,23 @@
 
 <main>
     <h2>Users</h2>
-    <p>Here is a list of all active users in the Froots Fantasy Football league:</p>
+    <p>Here is a list of all active users in the Froots Fantasy Football league. Click on a user to see their team information:</p>
     <ul id="users-list">
         <!-- Users will be populated here -->
     </ul>
+
+    <!-- Section to display team info -->
+    <div id="team-info">
+        <h3>Team Information</h3>
+        <p id="team-name"></p>
+        <img id="team-avatar" src="" alt="Team Avatar">
+    </div>
 </main>
 
 <script>
-    // Replace <league_id> with the actual league ID
-    const leagueId = "1114235132480757760";
-    
+    // Replace <your_league_id_here> with your actual league ID
+    const leagueId = "<your_league_id_here>";
+
     // API endpoint
     const apiUrl = `https://api.sleeper.app/v1/league/${leagueId}/users`;
 
@@ -87,11 +105,26 @@
     // Function to display users on the page
     function displayUsers(users) {
         const userList = document.getElementById('users-list');
+        userList.innerHTML = ''; // Clear the list
+
         users.forEach(user => {
             const li = document.createElement('li');
             li.textContent = `User: ${user.display_name}`;
+            li.addEventListener('click', () => showTeamInfo(user)); // Add click event to each user
             userList.appendChild(li);
         });
+    }
+
+    // Function to show team information when a user is clicked
+    function showTeamInfo(user) {
+        const teamNameElement = document.getElementById('team-name');
+        const teamAvatarElement = document.getElementById('team-avatar');
+
+        // Update the team info section
+        teamNameElement.textContent = `Team Name: ${user.metadata.team_name || 'No team name provided'}`;
+        teamAvatarElement.src = user.avatar
+            ? `https://sleepercdn.com/avatars/thumbs/${user.avatar}` // Sleeper's avatar URL format
+            : ''; // If no avatar is provided, set the src to an empty string
     }
 
     // Fetch and display users when the page loads
