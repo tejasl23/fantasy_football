@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matchups - Froots Fantasy Football</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            text-align: center;
+            padding: 10px 0;
+        }
+        nav {
+            background-color: #333;
+            overflow: hidden;
+        }
+        nav a {
+            float: left;
+            display: block;
+            color: white;
+            text-align: center;
+            padding: 14px 16px;
+            text-decoration: none;
+        }
+        nav a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+        main {
+            padding: 20px;
+        }
+        .dropdown-container {
+            margin-bottom: 20px;
+        }
+        .dropdown-container select {
+            padding: 10px;
+            font-size: 16px;
+        }
+        .record {
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        .matchup {
+            background-color: #f4f4f4;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        .matchup h3 {
+            margin-top: 0;
+        }
+        .year-divider {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 20px 0;
+            border-top: 2px solid #ddd;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Froots Fantasy Football</h1>
+</header>
+
+<nav>
+    <a href="index.html">Home</a>
+    <a href="users.html">Users</a>
+    <a href="matchups.html">Matchups</a>
+    <a href="league-history.html">League History</a>
+</nav>
+
+<main>
+    <h2>Matchups</h2>
+    <div class="dropdown-container">
+        <label for="user1">Select User 1:</label>
+        <select id="user1">
+            <!-- Options will be populated here -->
+        </select>
+        <label for="user2">Select User 2:</label>
+        <select id="user2">
+            <!-- Options will be populated here -->
+        </select>
+    </div>
+    <button id="fetch-matchups">Fetch Matchups</button>
+
+    <div class="record" id="win-lose-record" style="display: none;">
+        <!-- Win-Lose Record will be displayed here -->
+    </div>
+
+    <div id="matchups">
+        <!-- Matchups will be displayed here -->
+    </div>
+</main>
+
+<script>
+    const usersApiUrl = leagueId => `https://api.sleeper.app/v1/league/${leagueId}/users`;
+    const rostersApiUrl = leagueId => `https://api.sleeper.app/v1/league/${leagueId}/rosters`;
+    const matchupsApiUrl = (leagueId, week) => `https://api.sleeper.app/v1/league/${leagueId}/matchups/${week}`;
+
+    let leagueIds = {};
+    let usersData = {};
+    let rostersData = {};
+    let weeks = Array.from({ length: 17 }, (_, i) => i + 1); // Weeks 1 to 17
+
+    async function fetchLeagueIds() {
+        try {
+            const response = await fetch('league_ids.json');
+            leagueIds = await response.json();
+            await fetchAllData();
+        } catch (error) {
+            console.error('Error fetching league IDs:', error);
+        }
+    }
+
+    async function fetchAllData() {
+        for (const [year, leagueId] of Object.entries(leagueIds)) {
+            try {
+                const [usersResponse, rostersResponse] = await Promise.all([
+                    fetch(usersApiUrl(leagueId)),
+                    fetch(rostersApiUrl(leagueId))
+                ]);
+                usersData[leagueId] = await usersResponse.json();
+                rostersData[leagueId] = await rostersResponse.json();
+            } catch (error) {
+                console.error(`Error fetching data for league ${year}:`, error);
+            }
+        }
+        populateUserDropdowns();
+    }
+
+    function populateUserDropdowns() {
+        const user1Select = document.getElementById('user1');
+        const user2Select = document.getElementById('user2');
+
+        const allRosters = Object.values(rostersData).flat();
+        const uniqueUsers = Array.from(new Set(allRosters.map(roster => roster.owner_id)));
+
+        uniqueUsers.forEach(userId => {
+            // Find the user's display name
+            const userDisplayName = Object.values(usersData)
+                .flat()
+                .find(user => user.user_id === userId)?.display_name || `User ${userId}`; // Fallback name
+            
+            const option = document.createElement('option');
+            option.value = userId;
+            option.textContent = userDisplayName;
+            user1Select.appendChild(option);
+            user2Select.appendChild(option.cloneNode(true));
+        });
+    }
+
+    document.getElementById('fetch-matchups').addEventListener('click', async () => {
+        const user1Id = document.getElementById('user1').value;
+        const user2Id = document.getElementById('user2').value;
+
+        if (!user1Id || !user2Id) {
+            alert('Please select both users.');
+            return;
+        }
+        if (user1Id === user2Id) {
+            alert('Must select different users.');
+            return;
+        }
+
+        let user1Wins = 0;
+        let user2Wins = 0;
+        const matchupsContainer = document.getElementById('matchups');
+        matchupsContainer.innerHTML = '';
+
+        // Get the usernames
+        const user1DisplayName = Object.values(usersData)
+            .flat()
+            .find(user => user.user_id === user1Id)?.display_name || `User ${user1Id}`;
+        const user2DisplayName = Object.values(usersData)
+            .flat()
+            .find(user => user.user_id === user2Id)?.display_name || `User ${user2Id}`;
+
+        // Reverse order of leagueIds to get years in descending order
+        const reversedLeagueIds = Object.entries(leagueIds).reverse();
+
+        for (const [year, leagueId] of reversedLeagueIds) {
+            const yearDivider = document.createElement('div');
+            yearDivider.classList.add('year-divider');
+            yearDivider.textContent = `Year: ${year}`;
+            matchupsContainer.appendChild(yearDivider);
+
+            for (const week of weeks) {
+                try {
+                    const matchupsResponse = await fetch(matchupsApiUrl(leagueId, week));
+                    const matchups = await matchupsResponse.json();
+
+                    const user1Matchups = matchups.filter(m => m.roster_id === rostersData[leagueId].find(r => r.owner_id === user1Id).roster_id);
+                    const user2Matchups = matchups.filter(m => m.roster_id === rostersData[leagueId].find(r => r.owner_id === user2Id).roster_id);
+
+                    user1Matchups.forEach(user1Matchup => {
+                        const matchingMatchup = user2Matchups.find(user2Matchup => user2Matchup.matchup_id === user1Matchup.matchup_id);
+                        if (matchingMatchup) {
+                            const matchupDiv = document.createElement('div');
+                            matchupDiv.classList.add('matchup');
+                            matchupDiv.innerHTML = `
+                                <h3>${user1DisplayName} vs ${user2DisplayName} - Week ${week}:</h3>
+                                <p><strong>${user1DisplayName} Points:</strong> ${user1Matchup.points}</p>
+                                <p><strong>${user2DisplayName} Points:</strong> ${matchingMatchup.points}</p>
+                            `;
+                            matchupsContainer.appendChild(matchupDiv);
+
+                            // Update win/loss count
+                            if (user1Matchup.points > matchingMatchup.points) {
+                                user1Wins++;
+                            } else if (matchingMatchup.points > user1Matchup.points) {
+                                user2Wins++;
+                            }
+                        }
+                    });
+                } catch (error) {
+                    console.error(`Error fetching matchups for league ${leagueId}, week ${week}:`, error);
+                }
+            }
+        }
+
+        const winLoseRecord = document.getElementById('win-lose-record');
+        winLoseRecord.textContent = `All Time Record: ${user1DisplayName} - ${user1Wins}, ${user2DisplayName} - ${user2Wins}`;
+        winLoseRecord.style.display = 'block'; // Show the record section
+    });
+
+    fetchLeagueIds();
+</script>
+
+</body>
+</html>
